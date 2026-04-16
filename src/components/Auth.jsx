@@ -34,11 +34,11 @@ export default function Auth() {
         await supabase.from("profiles").update({ name: trimNick }).eq("id", data.user.id);
       }
 
-      // If real email provided, show check-email screen; otherwise user is logged in directly
-      if (realEmail) {
+      // If no session, Supabase requires email confirmation → show check-email screen
+      // If session exists, user is logged in → onAuthStateChange redirects automatically
+      if (!data.session && realEmail) {
         setMode("check-email");
       }
-      // If no real email, Supabase auto-confirms (email confirmations disabled) → onAuthStateChange fires
     } catch (err) {
       setError(err.message);
     }
