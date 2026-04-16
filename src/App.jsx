@@ -19,9 +19,9 @@ export default function App() {
   const [view, setView] = useState("home");
   const [badgePop, setBadgePop] = useState(null);
 
-  // Splash screen 3s
+  // Splash screen 1.5s
   useEffect(() => {
-    const t = setTimeout(() => setSplash(false), 3000);
+    const t = setTimeout(() => setSplash(false), 1500);
     return () => clearTimeout(t);
   }, []);
 
