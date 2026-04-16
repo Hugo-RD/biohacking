@@ -62,12 +62,11 @@ export async function load() {
 // --- Granular write operations ---
 
 export async function saveProfile(name, onboarded) {
-  if (supabase && userId) {
-    await supabase.from("profiles")
-      .update({ name, onboarded })
-      .eq("id", userId)
-      .catch(() => {});
-  }
+  if (!supabase || !userId) return { error: null };
+  const { error } = await supabase.from("profiles")
+    .update({ name, onboarded })
+    .eq("id", userId);
+  return { error };
 }
 
 export async function addSupplement(supp) {
