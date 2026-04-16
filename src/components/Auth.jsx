@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C } from "../constants";
 import { supabase } from "../supabaseClient";
 
@@ -11,6 +11,23 @@ export default function Auth() {
   const [pass, setPass] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Si Supabase redirige con error en el hash (#error=...&error_description=...),
+  // mostrarlo al usuario en vez de dejar la pantalla muda, y limpiar la URL.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash || !hash.includes("error")) return;
+    const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+    const desc = params.get("error_description");
+    const code = params.get("error_code");
+    if (desc || code) {
+      const friendly = code === "otp_expired"
+        ? "el enlace de confirmación ha caducado o ya se usó. regístrate de nuevo para recibir uno nuevo."
+        : decodeURIComponent(desc || code).replace(/\+/g, " ");
+      setError(friendly);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, []);
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -26,7 +43,13 @@ export default function Auth() {
       const realEmail = email.trim();
       const authEmail = realEmail || `${trimNick.toLowerCase().replace(/[^a-z0-9]/g, "")}@${FAKE_DOMAIN}`;
 
-      const { data, error: authError } = await supabase.auth.signUp({ email: authEmail, password: pass });
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: authEmail,
+        password: pass,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      });
       if (authError) { setError(authError.message); setLoading(false); return; }
 
       // Save nickname to profile
