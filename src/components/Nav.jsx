@@ -1,9 +1,10 @@
 import { C } from "../constants";
+import { IconHome, IconStats, IconConfig } from "./Icons";
 
 const TABS = [
-  { id: "home", icon: "⌂", label: "home" },
-  { id: "stats", icon: "◈", label: "stats" },
-  { id: "config", icon: "⚙", label: "config" },
+  { id: "home", Icon: IconHome, label: "home" },
+  { id: "stats", Icon: IconStats, label: "stats" },
+  { id: "config", Icon: IconConfig, label: "config" },
 ];
 
 export default function Nav({ view, setView }) {
@@ -19,7 +20,7 @@ export default function Nav({ view, setView }) {
           display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
           cursor: "pointer", padding: "3px 16px", opacity: view === n.id ? 1 : 0.3, transition: "all 0.2s",
         }}>
-          <span className="mono" style={{ fontSize: 18, color: view === n.id ? C.cyan : C.muted }}>{n.icon}</span>
+          <n.Icon size={20} color={view === n.id ? C.cyan : C.muted} />
           <span className="mono" style={{ fontSize: 7, letterSpacing: 1, color: view === n.id ? C.cyan : C.dim }}>{n.label}</span>
         </div>
       )}

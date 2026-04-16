@@ -1,7 +1,16 @@
 import { C, TODAY } from "../constants";
-import { getDayScore } from "../utils";
+import { getDayScore, getDayType } from "../utils";
 
-const RAMP = ["#111118", "#0a2a2a", "#0d3d3d", "#115555", "#1a7070", "#209090", "#28b0b0", "#00d4d4"];
+const RAMP_CYAN = ["#111118", "#0a1e2e", "#0d3050", "#115570", "#1a7090", "#2090b0", "#28b0d0", "#00f0ff"];
+const RAMP_GREEN = ["#111118", "#0a2e1a", "#0d4028", "#115538", "#1a7050", "#209060", "#28b070", "#00ff88"];
+const RAMP_PURPLE = ["#111118", "#150e2e", "#1e1545", "#2a1e5e", "#3a2878", "#4a3890", "#5a48a8", "#7b68ee"];
+
+function getRamp(dayType) {
+  if (dayType === "training") return RAMP_CYAN;
+  if (dayType === "supplements") return RAMP_GREEN;
+  if (dayType === "sleep") return RAMP_PURPLE;
+  return RAMP_CYAN;
+}
 
 export default function Heatmap({ logs, supps }) {
   const weeks = 13, todayStr = TODAY(), d = new Date();
@@ -14,9 +23,11 @@ export default function Heatmap({ logs, supps }) {
     for (let day = 0; day < 7; day++) {
       const k = d.toISOString().split("T")[0], future = k > todayStr;
       const score = future ? -1 : getDayScore(logs[k], supps);
+      const dayType = getDayType(logs[k]);
+      const ramp = getRamp(dayType);
       const isToday = k === todayStr;
-      let bg = RAMP[0];
-      if (!future && score > 0) bg = RAMP[Math.min(Math.ceil(score * 7), 7)];
+      let bg = ramp[0];
+      if (!future && score > 0) bg = ramp[Math.min(Math.ceil(score * 7), 7)];
       if (future) bg = "transparent";
 
       const log = logs[k];
@@ -43,10 +54,16 @@ export default function Heatmap({ logs, supps }) {
   return (
     <div>
       <div style={{ display: "flex", gap: 2, overflowX: "auto" }}>{cols}</div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 5, alignItems: "center", gap: 3, fontSize: 7, color: C.dim }}>
-        <span>menos</span>
-        {RAMP.slice(0, 6).map((c, i) => <div key={i} style={{ width: 9, height: 9, borderRadius: 2, background: c, border: `0.5px solid ${C.border}` }} />)}
-        <span>más</span>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 5, alignItems: "center", gap: 8, fontSize: 7, color: C.dim }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: RAMP_CYAN[6] }} />entreno
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: RAMP_GREEN[6] }} />supps
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: RAMP_PURPLE[6] }} />sleep
+        </span>
       </div>
     </div>
   );

@@ -120,6 +120,14 @@ export function getCorrelations(state) {
   return ins;
 }
 
+export function getDayType(log) {
+  if (!log) return null;
+  if (log.training?.done) return "training";
+  if (log.supplements && Object.values(log.supplements).some(Boolean)) return "supplements";
+  if (log.sleep?.hours) return "sleep";
+  return null;
+}
+
 export function getWeekStats(state) {
   const today = new Date(), dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
   const mon = new Date(today); mon.setDate(mon.getDate() - dow);

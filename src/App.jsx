@@ -2,58 +2,81 @@ import { useState, useEffect, useCallback } from "react";
 import { C, TODAY, DEFAULT_STATE, BADGES } from "./constants";
 import * as storage from "./storage";
 import * as utils from "./utils";
+import { useAuth } from "./hooks/useAuth";
 import Header from "./components/Header";
 import Nav from "./components/Nav";
+import Onboarding from "./components/Onboarding";
+import Auth from "./components/Auth";
 import Home from "./views/Home";
 import Stats from "./views/Stats";
 import Config from "./views/Config";
 
 export default function App() {
+  const { user, loading: authLoading, signOut, enabled: authEnabled } = useAuth();
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [splash, setSplash] = useState(true);
   const [view, setView] = useState("home");
   const [badgePop, setBadgePop] = useState(null);
 
-  // Load state
+  // Splash screen 3s
   useEffect(() => {
-    const saved = storage.load();
-    if (saved) {
-      if (!saved.trainingTypes) saved.trainingTypes = DEFAULT_STATE.trainingTypes;
-      if (!saved.unlockedBadges) saved.unlockedBadges = [];
-      saved.supplements = saved.supplements.map(s => ({ ...s, freq: s.freq || "daily" }));
-      setState(saved);
-    } else {
-      setState(DEFAULT_STATE);
-    }
-    setLoading(false);
+    const t = setTimeout(() => setSplash(false), 3000);
+    return () => clearTimeout(t);
   }, []);
 
-  // Save with badge checking
-  const save = useCallback((s) => {
+  // Load state when user changes
+  useEffect(() => {
+    const doLoad = async () => {
+      setLoading(true);
+      if (authEnabled && user) storage.init(user.id);
+      else storage.init(null);
+
+      const saved = await storage.load();
+      if (saved) {
+        if (!saved.trainingTypes) saved.trainingTypes = DEFAULT_STATE.trainingTypes;
+        if (!saved.unlockedBadges) saved.unlockedBadges = [];
+        if (saved.supplements) saved.supplements = saved.supplements.map(s => ({ ...s, freq: s.freq || "daily" }));
+        // Old users without onboarded flag but with logs → skip onboarding
+        if (!saved.onboarded && Object.keys(saved.logs || {}).length > 0) saved.onboarded = true;
+        setState(saved);
+      } else {
+        setState({ onboarded: false });
+      }
+      setLoading(false);
+    };
+    if (!authEnabled || !authLoading) doLoad();
+  }, [user, authLoading, authEnabled]);
+
+  // Check badges and trigger popup
+  const checkBadges = useCallback((s) => {
     const nb = [];
     for (const b of BADGES) {
       if (!s.unlockedBadges.includes(b.id) && b.check(s, utils)) {
         s.unlockedBadges = [...s.unlockedBadges, b.id];
         nb.push(b);
+        storage.unlockBadge(b.id);
       }
     }
-    setState(s);
-    storage.save(s);
     if (nb.length) {
       setBadgePop(nb[0]);
       setTimeout(() => setBadgePop(null), 2500);
     }
+    return s;
   }, []);
 
-  // Actions
+  // --- Actions (granular) ---
+
   const toggleSupp = useCallback((sid) => {
     const t = TODAY();
     const ns = JSON.parse(JSON.stringify(state));
     if (!ns.logs[t]) ns.logs[t] = {};
     if (!ns.logs[t].supplements) ns.logs[t].supplements = {};
     ns.logs[t].supplements[sid] = !ns.logs[t].supplements[sid];
-    save(ns);
-  }, [state, save]);
+    setState(checkBadges(ns));
+    storage.cacheState(ns);
+    storage.toggleSupplement(sid, t);
+  }, [state, checkBadges]);
 
   const doTrain = useCallback((trainId, trainInt) => {
     const t = TODAY();
@@ -61,9 +84,13 @@ export default function App() {
     if (!ns.logs[t]) ns.logs[t] = {};
     if (ns.logs[t].training?.done) return;
     const tt = ns.trainingTypes.find(x => x.id === trainId) || ns.trainingTypes[0];
-    ns.logs[t].training = { done: true, type: tt?.name || "Gym", emoji: tt?.emoji || "🏋️", intensity: trainInt };
-    save(ns);
-  }, [state, save]);
+    const typeName = tt?.name || "Gym";
+    const typeEmoji = tt?.emoji || "🏋️";
+    ns.logs[t].training = { done: true, type: typeName, emoji: typeEmoji, intensity: trainInt };
+    setState(checkBadges(ns));
+    storage.cacheState(ns);
+    storage.logTraining(t, trainId, typeName, typeEmoji, trainInt);
+  }, [state, checkBadges]);
 
   const doSleep = useCallback((hours, quality) => {
     const t = TODAY();
@@ -71,21 +98,65 @@ export default function App() {
     if (!ns.logs[t]) ns.logs[t] = {};
     if (ns.logs[t].sleep?.hours) return;
     ns.logs[t].sleep = { hours, quality };
-    save(ns);
-  }, [state, save]);
+    setState(checkBadges(ns));
+    storage.cacheState(ns);
+    storage.logSleep(t, hours, quality);
+  }, [state, checkBadges]);
 
-  const reset = useCallback(() => {
-    storage.reset();
-    setState(DEFAULT_STATE);
+  // --- Config actions (passed to Config.jsx) ---
+
+  const updateState = useCallback((fn) => {
+    const ns = JSON.parse(JSON.stringify(state));
+    const action = fn(ns);
+    setState(checkBadges(ns));
+    storage.cacheState(ns);
+    return { state: ns, action };
+  }, [state, checkBadges]);
+
+  const handleOnboardingComplete = useCallback(async (newState) => {
+    // Name comes from profile (set during signup), not from onboarding
+    if (state?.profile?.name) newState.profile.name = state.profile.name;
+    const saved = await storage.saveOnboarding(newState);
+    setState(saved);
+    setView("home");
+  }, [state]);
+
+  const handleReset = useCallback(async () => {
+    await storage.reset();
+    setState({ onboarded: false });
     setView("home");
   }, []);
 
-  if (loading || !state) {
+  // Splash screen
+  if (splash) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", background: C.bg, animation: "slideUp 0.5s ease",
+      }}>
+        <div className="mono" style={{ fontSize: 36, fontWeight: 700, color: C.cyan, letterSpacing: -1 }}>biohack</div>
+        <div style={{ fontSize: 10, color: C.dim, marginTop: 8, letterSpacing: 2 }}>TRACK. OPTIMIZE. REPEAT.</div>
+      </div>
+    );
+  }
+
+  // Loading screen
+  if (authLoading || loading || !state) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, color: C.cyan, fontFamily: "'Space Mono', monospace", fontSize: 11 }}>
         cargando...
       </div>
     );
+  }
+
+  // Auth gate (only if Supabase is configured)
+  if (authEnabled && !user) {
+    return <Auth />;
+  }
+
+  // Onboarding gate
+  if (!state.onboarded) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
   const today = TODAY(), tl = state.logs[today] || {};
@@ -109,7 +180,6 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 480, margin: "0 auto", position: "relative" }}>
-      {/* Badge popup */}
       {badgePop && (
         <div style={{
           position: "fixed", top: "18%", left: "50%", transform: "translateX(-50%)", zIndex: 999,
@@ -127,7 +197,7 @@ export default function App() {
       <div style={{ padding: "0 14px 74px", animation: "slideUp 0.3s ease" }}>
         {view === "home" && <Home state={state} onToggleSupp={toggleSupp} onTrain={doTrain} onSleep={doSleep} />}
         {view === "stats" && <Stats state={state} />}
-        {view === "config" && <Config state={state} onSave={save} onReset={reset} />}
+        {view === "config" && <Config state={state} onUpdate={updateState} onReset={handleReset} signOut={authEnabled ? signOut : null} />}
       </div>
 
       <Nav view={view} setView={setView} />

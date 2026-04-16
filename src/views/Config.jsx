@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { C } from "../constants";
+import * as storage from "../storage";
 
-export default function Config({ state, onSave, onReset }) {
+export default function Config({ state, onUpdate, onReset, signOut }) {
   const [nSN, setSN] = useState("");
   const [nSD, setSD] = useState("");
   const [nSE, setSE] = useState("💊");
@@ -10,9 +11,7 @@ export default function Config({ state, onSave, onReset }) {
   const [nTE, setTE] = useState("🏋️");
 
   const update = (fn) => {
-    const ns = JSON.parse(JSON.stringify(state));
-    fn(ns);
-    onSave(ns);
+    onUpdate(fn);
   };
 
   return (
@@ -20,7 +19,11 @@ export default function Config({ state, onSave, onReset }) {
       <div className="section-label">// perfil</div>
       <div className="card">
         <input type="text" value={state.profile.name}
-          onChange={e => update(ns => { ns.profile.name = e.target.value; })}
+          onChange={e => {
+            const name = e.target.value;
+            update(ns => { ns.profile.name = name; });
+            storage.saveProfile(name, state.onboarded);
+          }}
           style={{ width: "100%", boxSizing: "border-box" }} placeholder="tu nombre" />
       </div>
 
@@ -30,10 +33,14 @@ export default function Config({ state, onSave, onReset }) {
           <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: `0.5px solid ${C.border}` }}>
             <span style={{ fontSize: 11, flex: 1 }}>{s.emoji} {s.name} <span style={{ color: C.dim }}>— {s.dose}</span></span>
             <span className="freq-tag"
-              onClick={() => update(ns => {
-                const idx = ns.supplements.findIndex(x => x.id === s.id);
-                ns.supplements[idx].freq = ns.supplements[idx].freq === "conditional" ? "daily" : "conditional";
-              })}
+              onClick={() => {
+                const newFreq = s.freq === "conditional" ? "daily" : "conditional";
+                update(ns => {
+                  const idx = ns.supplements.findIndex(x => x.id === s.id);
+                  ns.supplements[idx].freq = newFreq;
+                });
+                storage.updateSupplement(s.id, { freq: newFreq });
+              }}
               style={{
                 cursor: "pointer",
                 background: s.freq === "conditional" ? "rgba(255,184,0,0.06)" : "rgba(0,240,255,0.06)",
@@ -43,7 +50,10 @@ export default function Config({ state, onSave, onReset }) {
               {s.freq === "conditional" ? "condicional" : "diario"}
             </span>
             <button className="btn btn-danger" style={{ fontSize: 9, padding: "2px 8px" }}
-              onClick={() => update(ns => { ns.supplements = ns.supplements.filter(x => x.id !== s.id); })}>✕</button>
+              onClick={() => {
+                update(ns => { ns.supplements = ns.supplements.filter(x => x.id !== s.id); });
+                storage.removeSupplement(s.id);
+              }}>✕</button>
           </div>
         ))}
         <div style={{ marginTop: 8, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
@@ -56,9 +66,19 @@ export default function Config({ state, onSave, onReset }) {
             <option value="daily">diario</option>
             <option value="conditional">condicional</option>
           </select>
-          <button className="btn btn-cyan" style={{ padding: "6px 10px" }} onClick={() => {
+          <button className="btn btn-cyan" style={{ padding: "6px 10px" }} onClick={async () => {
             if (!nSN.trim()) return;
-            update(ns => { ns.supplements.push({ id: "s" + Date.now(), name: nSN.trim(), emoji: nSE, dose: nSD.trim() || "—", freq: nSF }); });
+            const localId = "s" + Date.now();
+            const supp = { id: localId, name: nSN.trim(), emoji: nSE, dose: nSD.trim() || "—", freq: nSF };
+            update(ns => { ns.supplements.push(supp); });
+            const dbId = await storage.addSupplement(supp);
+            if (dbId && dbId !== localId) {
+              // Update local state with DB id
+              update(ns => {
+                const idx = ns.supplements.findIndex(x => x.id === localId);
+                if (idx >= 0) ns.supplements[idx].id = dbId;
+              });
+            }
             setSN(""); setSD("");
           }}>+</button>
         </div>
@@ -70,7 +90,10 @@ export default function Config({ state, onSave, onReset }) {
           <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0", borderBottom: `0.5px solid ${C.border}` }}>
             <span style={{ fontSize: 11 }}>{t.emoji} {t.name}</span>
             <button className="btn btn-danger" style={{ fontSize: 9, padding: "2px 8px" }}
-              onClick={() => update(ns => { ns.trainingTypes = ns.trainingTypes.filter(x => x.id !== t.id); })}>✕</button>
+              onClick={() => {
+                update(ns => { ns.trainingTypes = ns.trainingTypes.filter(x => x.id !== t.id); });
+                storage.removeTrainingType(t.id);
+              }}>✕</button>
           </div>
         ))}
         <div style={{ marginTop: 8, display: "flex", gap: 4 }}>
@@ -78,13 +101,31 @@ export default function Config({ state, onSave, onReset }) {
             {["🏋️", "🏊", "⚽", "🏀", "🚴", "🏃", "🧘", "🥊", "🎾", "🧗", "🏓", "🤸", "🥋", "🚣"].map(e => <option key={e} value={e}>{e}</option>)}
           </select>
           <input type="text" value={nTN} onChange={e => setTN(e.target.value)} placeholder="tipo" style={{ flex: 1 }} />
-          <button className="btn btn-cyan" style={{ padding: "6px 10px" }} onClick={() => {
+          <button className="btn btn-cyan" style={{ padding: "6px 10px" }} onClick={async () => {
             if (!nTN.trim()) return;
-            update(ns => { ns.trainingTypes.push({ id: "t" + Date.now(), name: nTN.trim(), emoji: nTE }); });
+            const localId = "t" + Date.now();
+            const tt = { id: localId, name: nTN.trim(), emoji: nTE };
+            update(ns => { ns.trainingTypes.push(tt); });
+            const dbId = await storage.addTrainingType(tt);
+            if (dbId && dbId !== localId) {
+              update(ns => {
+                const idx = ns.trainingTypes.findIndex(x => x.id === localId);
+                if (idx >= 0) ns.trainingTypes[idx].id = dbId;
+              });
+            }
             setTN("");
           }}>+</button>
         </div>
       </div>
+
+      {signOut && (
+        <>
+          <div className="section-label">// cuenta</div>
+          <div className="card">
+            <button className="btn btn-ghost" onClick={signOut} style={{ width: "100%" }}>cerrar sesión</button>
+          </div>
+        </>
+      )}
 
       <div className="section-label">// zona peligrosa</div>
       <div className="card" style={{ borderColor: "rgba(255,0,80,0.15)" }}>
