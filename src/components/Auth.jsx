@@ -48,14 +48,13 @@ export default function Auth() {
         password: pass,
         options: {
           emailRedirectTo: window.location.origin,
+          data: { nickname: trimNick },
         },
       });
       if (authError) { setError(authError.message); setLoading(false); return; }
 
-      // Save nickname to profile
-      if (data.user) {
-        await supabase.from("profiles").update({ name: trimNick }).eq("id", data.user.id);
-      }
+      // Profile row is created automatically by the on_auth_user_created trigger,
+      // which reads `nickname` from raw_user_meta_data. No manual update needed.
 
       // If no session, Supabase requires email confirmation → show check-email screen
       // If session exists, user is logged in → onAuthStateChange redirects automatically
