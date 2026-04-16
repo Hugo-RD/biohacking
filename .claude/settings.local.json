@@ -3,7 +3,13 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(npm run:*)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(gh pr create --base main --title 'Fix: mostrar check-email solo cuando Supabase lo requiere' --body ':*)",
+      "Bash(command -v gh)",
+      "Read(//c/Program Files/GitHub CLI/**)",
+      "Bash(winget install:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" --version)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)"
     ]
   }
 }
