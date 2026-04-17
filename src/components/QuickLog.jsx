@@ -4,6 +4,7 @@ import { C, TODAY } from "../constants";
 export default function QuickLog({ state, onToggleSupp, onTrain, onSleep }) {
   const [showTrain, setShowTrain] = useState(false);
   const [showSleep, setShowSleep] = useState(false);
+  const [showCues, setShowCues] = useState(false);
   const [trainId, setTrainId] = useState(state.trainingTypes[0]?.id);
   const [trainInt, setTrainInt] = useState(3);
   const [sleepH, setSleepH] = useState(7);
@@ -25,23 +26,32 @@ export default function QuickLog({ state, onToggleSupp, onTrain, onSleep }) {
 
   return (
     <div className="card">
-      {/* Implementation Intention reminders (Gollwitzer, d=0.65) */}
+      {/* Implementation Intention reminders (Gollwitzer, d=0.65) — collapsed by default */}
       {pendingCues.length > 0 && (
-        <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: `0.5px solid ${C.border}` }}>
-          <div className="mono" style={{ fontSize: 9, color: C.dim, marginBottom: 4 }}>// recordatorio</div>
-          {pendingCues.map((p, i) => (
-            <div key={i} style={{ fontSize: 10, color: C.muted, lineHeight: 1.5 }}>
-              <span style={{ marginRight: 4 }}>{p.emoji}</span>
-              <span style={{ color: C.text }}>{p.name}</span>
-              <span style={{ color: C.dim }}> — {p.cue}</span>
+        <div style={{ marginBottom: showCues ? 10 : 8, paddingBottom: showCues ? 8 : 0, borderBottom: showCues ? `0.5px solid ${C.border}` : "none" }}>
+          <div onClick={() => setShowCues(!showCues)}
+            style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.muted }}>
+            <span>🔔</span>
+            <span>{pendingCues.length} {pendingCues.length === 1 ? "recordatorio" : "recordatorios"}</span>
+            <span className="mono" style={{ marginLeft: "auto", fontSize: 9, color: C.dim }}>{showCues ? "▲" : "▼"}</span>
+          </div>
+          {showCues && (
+            <div style={{ marginTop: 6 }}>
+              {pendingCues.map((p, i) => (
+                <div key={i} style={{ fontSize: 10, color: C.muted, lineHeight: 1.6, paddingLeft: 4 }}>
+                  <span style={{ marginRight: 4 }}>{p.emoji}</span>
+                  <span style={{ color: C.text }}>{p.name}</span>
+                  <span style={{ color: C.dim }}> — {p.cue}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
 
       {/* Daily supplements */}
       {dailySupps.length > 0 && <>
-        <div className="mono" style={{ fontSize: 9, color: C.dim, marginBottom: 6 }}>diario ({dsDone}/{dailySupps.length})</div>
+        <div className="mono" style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>diario ({dsDone}/{dailySupps.length})</div>
         <div style={{ marginBottom: condSupps.length ? 6 : 0 }}>
           {dailySupps.map(s => {
             const done = !!tl.supplements?.[s.id];
@@ -55,7 +65,7 @@ export default function QuickLog({ state, onToggleSupp, onTrain, onSleep }) {
 
       {/* Conditional supplements */}
       {condSupps.length > 0 && <>
-        <div className="mono" style={{ fontSize: 9, color: C.dim, marginBottom: 6, marginTop: dailySupps.length ? 4 : 0 }}>condicional</div>
+        <div className="mono" style={{ fontSize: 10, color: C.dim, marginBottom: 6, marginTop: dailySupps.length ? 4 : 0 }}>condicional</div>
         <div>
           {condSupps.map(s => {
             const done = !!tl.supplements?.[s.id];

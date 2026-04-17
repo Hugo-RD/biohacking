@@ -70,7 +70,7 @@ input:focus, select:focus { border-color: rgba(0,240,255,0.4); }
 
 .section-label {
   font-family: 'Space Mono', monospace;
-  font-size: 9px;
+  font-size: 10px;
   color: #666;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -85,11 +85,11 @@ input:focus, select:focus { border-color: rgba(0,240,255,0.4); }
   cursor: pointer;
 }
 .expand-label { font-size: 12px; color: #666; transition: color 0.2s; }
-.expand-arrow { font-size: 9px; color: #333; margin-left: auto; font-family: 'Space Mono', monospace; }
+.expand-arrow { font-size: 10px; color: #333; margin-left: auto; font-family: 'Space Mono', monospace; }
 
 .freq-tag {
-  font-size: 8px;
-  padding: 1px 5px;
+  font-size: 9px;
+  padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Space Mono', monospace;
   letter-spacing: 0.5px;

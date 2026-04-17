@@ -32,10 +32,10 @@ export default function ConsistencyRings({ state }) {
               {item.isSuppGroup && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{dailySupps.length} diarios · {condSupps.length} condicionales</div>}
             </div>
             {item.sk != null && <div style={{ textAlign: "right" }}>
-              <div className="mono" style={{ fontSize: 9, color: C.dim }}>racha</div>
+              <div className="mono" style={{ fontSize: 10, color: C.dim }}>racha</div>
               <div className="mono" style={{ fontSize: 13, color: item.sk > 0 ? C.muted : C.dim }}>{item.sk}d</div>
             </div>}
-            {item.isSuppGroup && <span className="mono" style={{ fontSize: 9, color: C.dim }}>{expanded ? "▲" : "▼"}</span>}
+            {item.isSuppGroup && <span className="mono" style={{ fontSize: 10, color: C.dim }}>{expanded ? "▲" : "▼"}</span>}
           </div>
 
           {item.isSuppGroup && expanded && (

@@ -11,7 +11,7 @@ export default function Header({ name, identity, identityCustom, status, trainDo
             {name}
             {identityLabel && <span style={{ fontSize: 10, color: C.muted, fontWeight: 400, marginLeft: 6 }}>· {identityLabel}</span>}
           </div>
-          <div className="mono" style={{ fontSize: 9, color: C.cyan, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 }}>{status}</div>
+          <div className="mono" style={{ fontSize: 10, color: C.cyan, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 }}>{status}</div>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {[{ done: trainDone, c: C.green }, { done: sleepDone, c: C.purple }, { done: suppsDone, c: C.cyan }]
