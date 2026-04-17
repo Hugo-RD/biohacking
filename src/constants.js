@@ -16,8 +16,22 @@ export const WDAYS = ["L", "M", "X", "J", "V", "S", "D"];
 
 export const TODAY = () => new Date().toISOString().split("T")[0];
 
+// Identity archetypes for onboarding (Pilar 1.3).
+// Based on identity-based habits research (Wood & Neal 2007, Clear 2018).
+// Deliberately serious tone — not a BuzzFeed quiz.
+export const ARCHETYPES = [
+  { id: "investigador", emoji: "🧬", name: "el investigador", desc: "optimizo mi biología con método" },
+  { id: "atleta", emoji: "⚔️", name: "el atleta", desc: "construyo un cuerpo fuerte y resiliente" },
+  { id: "monje", emoji: "🧘", name: "el monje", desc: "priorizo calma, sueño y claridad mental" },
+  { id: "guerrero", emoji: "🔥", name: "el guerrero", desc: "entreno duro, recupero duro" },
+  { id: "constructor", emoji: "🏗️", name: "el constructor", desc: "mejoro un 1% cada día" },
+  { id: "equilibrado", emoji: "✨", name: "el equilibrado", desc: "no un extremo, una vida integrada" },
+];
+
+export const getArchetype = (id) => ARCHETYPES.find(a => a.id === id) || null;
+
 export const DEFAULT_STATE = {
-  profile: { name: "Biohacker", created: TODAY() },
+  profile: { name: "Biohacker", created: TODAY(), identity: null, identityCustom: null },
   supplements: [
     { id: "s1", name: "Creatina", emoji: "💊", dose: "5g", freq: "daily" },
     { id: "s2", name: "Magnesio", emoji: "🧪", dose: "400mg", freq: "daily" },

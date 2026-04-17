@@ -72,7 +72,10 @@ export async function saveProfile(name, onboarded) {
 export async function addSupplement(supp) {
   if (supabase && userId) {
     const { data } = await supabase.from("user_supplements")
-      .insert({ user_id: userId, name: supp.name, emoji: supp.emoji, dose: supp.dose, freq: supp.freq, sort_order: supp.sortOrder || 0 })
+      .insert({
+        user_id: userId, name: supp.name, emoji: supp.emoji, dose: supp.dose, freq: supp.freq,
+        cue: supp.cue || null, sort_order: supp.sortOrder || 0,
+      })
       .select("id")
       .single()
       .catch(() => ({ data: null }));
@@ -81,7 +84,27 @@ export async function addSupplement(supp) {
   return supp.id;
 }
 
-export async function removeSupplement(id) {
+// Archive = soft delete. Preserves historical logs.
+export async function archiveSupplement(id) {
+  if (supabase && userId) {
+    await supabase.from("user_supplements")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id)
+      .catch(() => {});
+  }
+}
+
+export async function unarchiveSupplement(id) {
+  if (supabase && userId) {
+    await supabase.from("user_supplements")
+      .update({ archived_at: null })
+      .eq("id", id)
+      .catch(() => {});
+  }
+}
+
+// Hard delete. Use only when really needed — destroys logs via CASCADE.
+export async function deleteSupplementForever(id) {
   if (supabase && userId) {
     await supabase.from("user_supplements").delete().eq("id", id).catch(() => {});
   }
@@ -96,7 +119,10 @@ export async function updateSupplement(id, updates) {
 export async function addTrainingType(tt) {
   if (supabase && userId) {
     const { data } = await supabase.from("user_training_types")
-      .insert({ user_id: userId, name: tt.name, emoji: tt.emoji, sort_order: tt.sortOrder || 0 })
+      .insert({
+        user_id: userId, name: tt.name, emoji: tt.emoji,
+        cue: tt.cue || null, sort_order: tt.sortOrder || 0,
+      })
       .select("id")
       .single()
       .catch(() => ({ data: null }));
@@ -105,10 +131,44 @@ export async function addTrainingType(tt) {
   return tt.id;
 }
 
-export async function removeTrainingType(id) {
+export async function archiveTrainingType(id) {
+  if (supabase && userId) {
+    await supabase.from("user_training_types")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id)
+      .catch(() => {});
+  }
+}
+
+export async function unarchiveTrainingType(id) {
+  if (supabase && userId) {
+    await supabase.from("user_training_types")
+      .update({ archived_at: null })
+      .eq("id", id)
+      .catch(() => {});
+  }
+}
+
+export async function deleteTrainingTypeForever(id) {
   if (supabase && userId) {
     await supabase.from("user_training_types").delete().eq("id", id).catch(() => {});
   }
+}
+
+export async function updateTrainingType(id, updates) {
+  if (supabase && userId) {
+    await supabase.from("user_training_types").update(updates).eq("id", id).catch(() => {});
+  }
+}
+
+// --- Identity (profiles.identity / identity_custom) ---
+
+export async function saveIdentity(identity, identityCustom) {
+  if (!supabase || !userId) return { error: null };
+  const { error } = await supabase.from("profiles")
+    .update({ identity: identity || null, identity_custom: identityCustom || null })
+    .eq("id", userId);
+  return { error };
 }
 
 export async function toggleSupplement(suppId, date) {
@@ -162,7 +222,7 @@ export async function reset() {
   if (supabase && userId) {
     // CASCADE deletes handle logs, supps, training types, badges
     await supabase.from("profiles")
-      .update({ name: "Biohacker", onboarded: false })
+      .update({ name: "Biohacker", onboarded: false, identity: null, identity_custom: null })
       .eq("id", userId)
       .catch(() => {});
     // Delete all user data (cascade from supplement_logs etc via foreign keys)
@@ -186,15 +246,20 @@ export function cacheState(state) {
 
 export async function saveOnboarding(state) {
   if (supabase && userId) {
-    // Mark onboarded (name already set during signup)
+    // Mark onboarded + save identity if provided
     await supabase.from("profiles")
-      .update({ onboarded: true })
+      .update({
+        onboarded: true,
+        identity: state.profile?.identity || null,
+        identity_custom: state.profile?.identityCustom || null,
+      })
       .eq("id", userId);
 
-    // Bulk insert supplements
+    // Bulk insert supplements (with cue if set)
     if (state.supplements.length > 0) {
       const suppRows = state.supplements.map((s, i) => ({
-        user_id: userId, name: s.name, emoji: s.emoji, dose: s.dose, freq: s.freq, sort_order: i,
+        user_id: userId, name: s.name, emoji: s.emoji, dose: s.dose, freq: s.freq,
+        cue: s.cue || null, sort_order: i,
       }));
       const { data: insertedSupps } = await supabase.from("user_supplements")
         .insert(suppRows).select("id, name");
@@ -208,10 +273,11 @@ export async function saveOnboarding(state) {
       }
     }
 
-    // Bulk insert training types
+    // Bulk insert training types (with cue if set)
     if (state.trainingTypes.length > 0) {
       const ttRows = state.trainingTypes.map((t, i) => ({
-        user_id: userId, name: t.name, emoji: t.emoji, sort_order: i,
+        user_id: userId, name: t.name, emoji: t.emoji,
+        cue: t.cue || null, sort_order: i,
       }));
       const { data: insertedTTs } = await supabase.from("user_training_types")
         .insert(ttRows).select("id, name");
@@ -240,12 +306,16 @@ function transformFromDB(data) {
     emoji: s.emoji,
     dose: s.dose,
     freq: s.freq,
+    cue: s.cue || null,
+    archivedAt: s.archived_at || null,
   }));
 
   const trainingTypes = (data.trainingTypes || []).map(t => ({
     id: t.id,
     name: t.name,
     emoji: t.emoji,
+    cue: t.cue || null,
+    archivedAt: t.archived_at || null,
   }));
 
   // Build logs object keyed by date
@@ -279,7 +349,12 @@ function transformFromDB(data) {
   }
 
   return {
-    profile: { name: profile.name, created: profile.created_at },
+    profile: {
+      name: profile.name,
+      created: profile.created_at,
+      identity: profile.identity || null,
+      identityCustom: profile.identity_custom || null,
+    },
     supplements,
     trainingTypes,
     logs,

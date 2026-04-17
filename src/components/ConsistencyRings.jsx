@@ -5,8 +5,8 @@ import Ring from "./Ring";
 
 export default function ConsistencyRings({ state }) {
   const [expanded, setExpanded] = useState(false);
-  const dailySupps = state.supplements.filter(s => s.freq !== "conditional");
-  const condSupps = state.supplements.filter(s => s.freq === "conditional");
+  const dailySupps = state.supplements.filter(s => !s.archivedAt && s.freq !== "conditional");
+  const condSupps = state.supplements.filter(s => !s.archivedAt && s.freq === "conditional");
 
   const items = [
     { label: "Entreno", emoji: "🏋️", color: C.green, pct: getCons(state, "training"), total: cntTotal(state.logs, "training"), unit: "entrenos", sk: getStreak(state.logs, "training") },

@@ -1,11 +1,16 @@
-import { C } from "../constants";
+import { C, getArchetype } from "../constants";
 
-export default function Header({ name, status, trainDone, sleepDone, suppsDone, complete }) {
+export default function Header({ name, identity, identityCustom, status, trainDone, sleepDone, suppsDone, complete }) {
+  const arch = getArchetype(identity);
+  const identityLabel = arch ? arch.name : (identity === "custom" && identityCustom ? identityCustom : null);
   return (
     <div style={{ padding: "16px 14px 12px", borderBottom: `0.5px solid ${C.border}` }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>{name}</div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>
+            {name}
+            {identityLabel && <span style={{ fontSize: 10, color: C.muted, fontWeight: 400, marginLeft: 6 }}>· {identityLabel}</span>}
+          </div>
           <div className="mono" style={{ fontSize: 9, color: C.cyan, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 }}>{status}</div>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>

@@ -10,15 +10,35 @@ export default function QuickLog({ state, onToggleSupp, onTrain, onSleep }) {
   const [sleepQ, setSleepQ] = useState(3);
 
   const tl = state.logs[TODAY()] || {};
-  const dailySupps = state.supplements.filter(s => s.freq !== "conditional");
-  const condSupps = state.supplements.filter(s => s.freq === "conditional");
+  const dailySupps = state.supplements.filter(s => !s.archivedAt && s.freq !== "conditional");
+  const condSupps = state.supplements.filter(s => !s.archivedAt && s.freq === "conditional");
   const dsDone = dailySupps.filter(s => tl.supplements?.[s.id]).length;
   const trainDone = tl.training?.done;
   const sleepDone = !!tl.sleep?.hours;
   const complete = trainDone && sleepDone && dsDone === dailySupps.length && dailySupps.length > 0;
 
+  // Implementation Intention reminders — cues of pending habits (Gollwitzer effect)
+  const pendingCues = [
+    ...dailySupps.filter(s => s.cue && !tl.supplements?.[s.id]).map(s => ({ emoji: s.emoji, name: s.name, cue: s.cue })),
+    ...condSupps.filter(s => s.cue && !tl.supplements?.[s.id]).map(s => ({ emoji: s.emoji, name: s.name, cue: s.cue })),
+  ];
+
   return (
     <div className="card">
+      {/* Implementation Intention reminders (Gollwitzer, d=0.65) */}
+      {pendingCues.length > 0 && (
+        <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: `0.5px solid ${C.border}` }}>
+          <div className="mono" style={{ fontSize: 9, color: C.dim, marginBottom: 4 }}>// recordatorio</div>
+          {pendingCues.map((p, i) => (
+            <div key={i} style={{ fontSize: 10, color: C.muted, lineHeight: 1.5 }}>
+              <span style={{ marginRight: 4 }}>{p.emoji}</span>
+              <span style={{ color: C.text }}>{p.name}</span>
+              <span style={{ color: C.dim }}> — {p.cue}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Daily supplements */}
       {dailySupps.length > 0 && <>
         <div className="mono" style={{ fontSize: 9, color: C.dim, marginBottom: 6 }}>diario ({dsDone}/{dailySupps.length})</div>
@@ -67,7 +87,7 @@ export default function QuickLog({ state, onToggleSupp, onTrain, onSleep }) {
           {showTrain && (
             <div style={{ paddingTop: 8 }}>
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
-                {state.trainingTypes.map(t =>
+                {state.trainingTypes.filter(t => !t.archivedAt).map(t =>
                   <button key={t.id} className={`btn btn-ghost ${trainId === t.id ? "active" : ""}`}
                     style={{ fontSize: 11, padding: "5px 9px" }} onClick={() => setTrainId(t.id)}>
                     {t.emoji} {t.name}

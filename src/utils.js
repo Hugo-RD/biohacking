@@ -38,7 +38,7 @@ export function getCons(state, type, days = 30, sid) {
 }
 
 export function getSuppCons(state, days = 30) {
-  const daily = state.supplements.filter(s => s.freq !== "conditional");
+  const daily = state.supplements.filter(s => !s.archivedAt && s.freq !== "conditional");
   if (!daily.length) return 0;
   let done = 0, d = new Date();
   for (let i = 0; i < days; i++) {
@@ -51,7 +51,7 @@ export function getSuppCons(state, days = 30) {
 
 export function getDayScore(log, supps) {
   if (!log) return 0;
-  const daily = supps.filter(s => s.freq !== "conditional");
+  const daily = supps.filter(s => !s.archivedAt && s.freq !== "conditional");
   let s = 0, t = daily.length + 2;
   s += daily.filter(sp => log.supplements?.[sp.id]).length;
   if (log.training?.done) s++;
@@ -60,7 +60,7 @@ export function getDayScore(log, supps) {
 }
 
 export function hasPerfect(state) {
-  const daily = state.supplements.filter(s => s.freq !== "conditional");
+  const daily = state.supplements.filter(s => !s.archivedAt && s.freq !== "conditional");
   return Object.values(state.logs).some(log => {
     if (!log.training?.done || !log.sleep?.hours) return false;
     return daily.length > 0 && daily.every(s => log.supplements?.[s.id]);
@@ -68,7 +68,7 @@ export function hasPerfect(state) {
 }
 
 export function hasPerfectWeek(state) {
-  const daily = state.supplements.filter(s => s.freq !== "conditional");
+  const daily = state.supplements.filter(s => !s.archivedAt && s.freq !== "conditional");
   const days = Object.keys(state.logs).sort();
   let c = 0, prev = null;
   for (const day of days) {

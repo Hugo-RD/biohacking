@@ -160,7 +160,7 @@ export default function App() {
   }
 
   const today = TODAY(), tl = state.logs[today] || {};
-  const dailySupps = state.supplements.filter(s => s.freq !== "conditional");
+  const dailySupps = state.supplements.filter(s => !s.archivedAt && s.freq !== "conditional");
   const trainDone = tl.training?.done;
   const sleepDone = !!tl.sleep?.hours;
   const dsDone = dailySupps.filter(s => tl.supplements?.[s.id]).length;
@@ -192,7 +192,7 @@ export default function App() {
         </div>
       )}
 
-      <Header name={state.profile.name} status={status} trainDone={trainDone} sleepDone={sleepDone} suppsDone={suppsDone} complete={complete} />
+      <Header name={state.profile.name} identity={state.profile.identity} identityCustom={state.profile.identityCustom} status={status} trainDone={trainDone} sleepDone={sleepDone} suppsDone={suppsDone} complete={complete} />
 
       <div style={{ padding: "0 14px 74px", animation: "slideUp 0.3s ease" }}>
         {view === "home" && <Home state={state} onToggleSupp={toggleSupp} onTrain={doTrain} onSleep={doSleep} />}
